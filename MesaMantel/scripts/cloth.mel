@@ -1,0 +1,59 @@
+//This MEL script allows to create and constrain joints to selected poly vertices - 
+//BY RICCARDO FAGA - ricfaga2@gmail.com - www.ricfaga3d.netsons.org
+
+
+//Declare and initialize variables
+
+string $vertexSelection [];
+clear $vertexSelection;
+$vertexSelection = `ls -sl -fl`;
+string $jointSelection [];
+clear $jointSelection;
+string $joint = "";
+string $vertex = "";
+float $xyz[];
+clear $xyz;
+string $rejoint = "";
+string $repoly = "";
+float $uv[];
+clear $uv;
+string $vtxuv[];
+clear $vtxuv;
+int $i=0;
+
+//Create and rename joints on the selected poly vertices
+
+for ($vertex in $vertexSelection)
+{
+ select -cl  ;
+ $repoly = `substitute ".v.*" $vertex ""`;
+ $xyz = `pointPosition -w $vertex`;
+ $rejoint = `substitute ".*x." $vertex ""`;
+ $rejoint = `substitute "].*" $rejoint ""`;
+ $rejoint = $repoly + "joint" + $rejoint;
+ joint -p $xyz[0] $xyz[1] $xyz[2] -n $rejoint;
+ $jointSelection[$i] = $rejoint;
+ $i = $i+1; 
+ select -cl  ;
+}
+
+//Create and assign point On Poly constain
+
+for ($joint in $jointSelection)
+{     
+  $vertex = `substitute "joint" $joint ".vtx["`;
+  $vertex = $vertex + "]";
+  select -cl;
+  select -r $vertex;
+  $vtxuv = `polyListComponentConversion -fv -tuv`;
+  $uv = `polyEditUV -q $vtxuv`;
+  select -cl;
+  select -r $vertex;
+  select -tgl $joint;
+  doCreatePointOnPolyConstraintArgList 2 {   "0" ,"0" ,"0" ,"1" ,"" ,"1" ,"0" ,"0" ,"0" ,"0" };
+   {string $constraint[]=`pointOnPolyConstraint -offset 0 0 0  -weight 1`; 
+    setAttr ($constraint[0]+"."+`substitute ".vtx.*" $vertex "U0"`) $uv[0]; 
+    setAttr ($constraint[0]+"."+`substitute ".vtx.*" $vertex "V0"`) $uv[1];
+   };
+  select -cl;
+}
